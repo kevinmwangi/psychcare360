@@ -381,7 +381,7 @@ app.post("/submit-appointment", express.json(), (req, res) => {
 
     const mail = {
         from: `${process.env.EMAIL_USER_FROM}`,
-        to: `${process.env.EMAIL_USER}`,
+        to: `${process.env.EMAIL_USER_TO}`,
         subject: `New Appointment Request From ${f_name} ${l_name}`,
         text: `
             Primary Condition: ${primary_condition || 'N/A'}
@@ -433,7 +433,7 @@ app.post("/contact-form", express.json(), (req, res) => {
 
     const mail = {
         from: `${process.env.EMAIL_USER_FROM}`,
-        to: `${process.env.EMAIL_USER}`,
+        to: `${process.env.EMAIL_USER_TO}`,
         subject: `New Contact Form Submission from ${name}`,
         text: `
             Name: ${name}
