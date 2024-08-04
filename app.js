@@ -476,7 +476,7 @@ app.use((err, req, res) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
     const startupTime = process.uptime() * 1000; // Convert to milliseconds
     // console.log(`Server is running on port ${PORT}`);
