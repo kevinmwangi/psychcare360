@@ -206,99 +206,10 @@
             }
 
         } catch (error) {
-            // console.error('An error occurred:', error);
             logError(error.message, error.stack);
         }
     });
 
-    // document.addEventListener('DOMContentLoaded', function() {
-    //     const form = document.querySelector('form');
-    //     const modal = new bootstrap.Modal(document.getElementById('successModal'));
-    //     let modalHideTimer;
-    //
-    //     form.addEventListener('submit', function(e) {
-    //         e.preventDefault();
-    //
-    //         console.log('----- e ---', e.target.action)
-    //
-    //         let endpoint = e.target.action; //'/contact-form'; // Default endpoint
-    //         let formData = {};
-    //
-    //         if (form.id === 'subscribe-newsletter') {
-    //             // endpoint = '/subscribe-newsletter';
-    //             formData = {
-    //                 email_address: form.querySelector('input[name="email_address"]').value
-    //             };
-    //         } else if (form.id === 'submit-appointment') {
-    //             // endpoint = '/submit-appointment';
-    //             formData = {
-    //                 primary_condition: form.querySelector('select[name="primary_condition"]').value,
-    //                 secondary_condition: form.querySelector('select[name="secondary_condition"]').value,
-    //                 f_name: form.querySelector('input[name="f_name"]').value,
-    //                 l_name: form.querySelector('input[name="l_name"]').value,
-    //                 address: form.querySelector('input[name="address"]').value,
-    //                 gender: form.querySelector('select[name="gender"]').value,
-    //                 email: form.querySelector('input[name="email"]').value,
-    //                 phone: form.querySelector('input[name="phone"]').value,
-    //                 dob: form.querySelector('input[name="dob"]').value,
-    //                 zip_code: form.querySelector('input[name="zip_code"]').value,
-    //                 insurance: form.querySelector('select[name="insurance"]').value,
-    //                 where_about: form.querySelector('select[name="where_about"]').value
-    //             };
-    //         } else {
-    //             // Contact form
-    //             formData = {
-    //                 name: form.querySelector('input[name="name"]').value,
-    //                 email: form.querySelector('input[name="email"]').value,
-    //                 message: form.querySelector('textarea[name="message"]').value
-    //             };
-    //         }
-    //
-    //         fetch(endpoint, {
-    //             method: 'POST',
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //             },
-    //             body: JSON.stringify(formData)
-    //         })
-    //             .then(response => response.json())
-    //             .then(data => {
-    //                 document.getElementById('status').textContent = data.success ? 'Success' : 'Error';
-    //                 document.getElementById('message').textContent = data.message;
-    //
-    //                 if (data.success) {
-    //                     // Clear the form if submission was successful
-    //                     form.reset();
-    //                 }
-    //
-    //                 showModalWithAutoHide();
-    //             })
-    //             .catch(error => {
-    //                 // console.error('Error:', error);
-    //                 // Log the error
-    //                 logError('Form submission error', error.stack);
-    //                 document.getElementById('status').textContent = 'Error';
-    //                 document.getElementById('message').textContent = 'An unexpected error occurred. Please try again later.';
-    //                 showModalWithAutoHide();
-    //             });
-    //     });
-    //
-    //     function showModalWithAutoHide() {
-    //         modal.show();
-    //         if (modalHideTimer) {
-    //             clearTimeout(modalHideTimer);
-    //         }
-    //         modalHideTimer = setTimeout(() => {
-    //             modal.hide();
-    //         }, 2500);
-    //     }
-    //
-    //     document.getElementById('successModal').addEventListener('click', function() {
-    //         if (modalHideTimer) {
-    //             clearTimeout(modalHideTimer);
-    //         }
-    //     });
-    // });
     document.addEventListener('DOMContentLoaded', function() {
         const forms = document.querySelectorAll('form');
         const modal = new bootstrap.Modal(document.getElementById('successModal'));
@@ -336,14 +247,6 @@
 
                         if (data.success) {
                             form.reset();
-
-                            // Reset TempusDominus date/time pickers if they exist
-                            // form.querySelectorAll('.datetimepicker-input').forEach(input => {
-                            //     const picker = TempusDominus.getInstance(input);
-                            //     if (picker) {
-                            //         picker.clear();
-                            //     }
-                            // });
                         }
 
                         showModalWithAutoHide();

@@ -52,7 +52,7 @@ var Tawk_LoadStart = new Date();
         if (reconnectAttempts < maxReconnectAttempts && checkOnline()) {
             setTimeout(function() {
                 reconnectAttempts++;
-                console.log('Attempting to reconnect... (Attempt ' + reconnectAttempts + ')');
+                // console.log('Attempting to reconnect... (Attempt ' + reconnectAttempts + ')');
                 loadTawkScript();
             }, 5000 * Math.pow(2, reconnectAttempts)); // Exponential backoff
         } else {

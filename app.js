@@ -1,7 +1,5 @@
 const env = require('dotenv').config();
 const express = require("express");
-// const multer = require('multer');
-// const upload = multer();
 const https = require("https");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -9,12 +7,23 @@ const nodemailer = require("nodemailer");
 const {SitemapStream} = require('sitemap');
 const {createGzip} = require('zlib');
 const winston = require('winston');
-const debug = require('debug')(env.parsed.DEBUG);
-const debugAppointment = require('debug')(env.parsed.DEBUG_APPOINTMENT);
-const fs = require('fs').promises;
+const debug = require('debug')(process.env.DEBUG);
+const debugAppointment = require('debug')(process.env.DEBUG_APPOINTMENT);
+const fs = require('fs');
 const path = require('path');
+const logDir = 'logs';
+const helmet = require('helmet');
+const rateLimit = require("express-rate-limit");
+const compression = require('compression');
 
 const app = express();
+app.set('trust proxy', 1);
+app.use((req, res, next) => {
+    if (process.env.NODE_ENV === 'production' && !req.secure) {
+        return res.redirect('https://' + req.headers.host + req.url);
+    }
+    next();
+});
 
 const serverTiming = (req, res, next) => {
     const start = process.hrtime();
@@ -42,6 +51,10 @@ const getDuration = (start) => {
     return end[0] * 1000 + end[1] / 1e6; // Convert to milliseconds
 };
 
+if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir);
+}
+
 // Logger configuration
 const logger = winston.createLogger({
     level: 'info',
@@ -49,19 +62,20 @@ const logger = winston.createLogger({
         winston.format.timestamp(),
         winston.format.json()
     ),
+
     transports: [
-        new winston.transports.File({filename: 'error.log', level: 'error'}),
-        new winston.transports.File({filename: 'combined.log'}),
+        new winston.transports.File({ filename: path.join(logDir, 'error.log'), level: 'error' }),
+        new winston.transports.File({ filename: path.join(logDir, 'combined.log') }),
     ],
 });
 
 // Email transporter
 const transporter = nodemailer.createTransport({
-    host: env.parsed.EMAIL_HOST,
-    port: env.parsed.EMAIL_PORT,
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
     auth: {
-        user: env.parsed.EMAIL_USER,
-        pass: env.parsed.EMAIL_PASS,
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
     },
     tls: {
         rejectUnauthorized: false
@@ -71,15 +85,18 @@ const transporter = nodemailer.createTransport({
 // Helper function for serving static HTML files
 const serveHTMLFile = (filePath, debugMessage) => async (req, res) => {
     const start = process.hrtime();
+    const fullPath = path.join(__dirname, filePath);
+
+    debug(`${debugMessage} - Attempting to serve: ${fullPath}`);
     debug(debugMessage);
     try {
-        await fs.access(path.join(__dirname, filePath));
+        await fs.promises.access(fullPath);
         const accessDuration = getDuration(start);
 
-        res.sendFile(path.join(__dirname, filePath), {}, (err) => {
+        res.sendFile(fullPath, {}, (err) => {
             if (err) {
-                debug(`Error in ${filePath}: %O`, err);
-                logger.error(`Error serving ${filePath}:`, err);
+                debug(`Error in ${fullPath}: %O`, err);
+                logger.error(`Error serving ${fullPath}:`, err);
                 setServerTiming(res, `access;dur=${accessDuration}, error;dur=${getDuration(start)}`);
                 res.status(500).send('An error occurred');
             } else {
@@ -88,8 +105,8 @@ const serveHTMLFile = (filePath, debugMessage) => async (req, res) => {
             }
         });
     } catch (error) {
-        debug(`Error in ${filePath}: %O`, error);
-        logger.error(`Error serving ${filePath}:`, error);
+        debug(`Error in ${fullPath}: %O`, error);
+        logger.error(`Error serving ${fullPath}:`, error);
         setServerTiming(res, `error;dur=${getDuration(start)}`);
         res.status(500).send('An error occurred');
     }
@@ -104,7 +121,7 @@ transporter.verify((error) => {
     }
 });
 
-if (env.parsed.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production') {
     logger.add(new winston.transports.Console({
         format: winston.format.simple(),
     }));
@@ -115,13 +132,66 @@ const isValidEmail = (email) => {
     return emailRegex.test(email);
 }
 
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // limit each IP to 100 requests per windowMs
+});
+
 // Middleware
 app.use(cors({origin: "*"}));
-app.use(express.static("public"));
-app.use('/uploads', express.static('uploads'));
+app.use(express.static(path.join(__dirname, "public")));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 app.use(serverTiming);
+
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'",
+                "https://www.googletagmanager.com",
+                "https://code.jquery.com",
+                "https://cdn.jsdelivr.net",
+                "https://assets.calendly.com",
+                "https://embed.tawk.to",
+                "https://*.list-manage.com",
+                "https://*.mailchimp.com",
+                "https://va.tawk.to",
+                "https://calendly.com",
+                "https://m.stripe.com"
+            ],
+            styleSrc: ["'self'", "'unsafe-inline'",
+                "https://fonts.googleapis.com",
+                "https://cdn.jsdelivr.net",
+                "https://embed.tawk.to"
+            ],
+            fontSrc: ["'self'",
+                "https://fonts.gstatic.com",
+                "https://cdn.jsdelivr.net",
+                "https://embed.tawk.to",
+                "https://va.tawk.to"
+            ],
+            imgSrc: ["'self'", "data:", "https:", "https://*.mailchimp.com"],
+            connectSrc: ["'self'",
+                "https://api.tawk.to",
+                "wss://socket.tawk.to",
+                "https://*.list-manage.com",
+                "https://*.mailchimp.com",
+                "https://*.calendly.com",
+                "https://va.tawk.to",
+                "wss://*.tawk.to",
+                "https://embed.tawk.to"
+            ],
+            formAction: ["'self'", "https://*.list-manage.com", "https://*.mailchimp.com"],
+            frameSrc: ["'self'", "https://*.mailchimp.com", "https://calendly.com", "https://tawk.to", "https://www.google.com"],
+            frameAncestors: ["'self'", "https://*.mailchimp.com", "https://*.calendly.com"],
+            mediaSrc: ["'self'", "https://embed.tawk.to"]
+        },
+    },
+}));
+app.use(limiter);
+app.use(compression());
 
 // Sitemap configuration
 app.get('/sitemap.xml', async (req, res) => {
@@ -130,7 +200,7 @@ app.get('/sitemap.xml', async (req, res) => {
     try {
         const sitemapPath = path.join(__dirname, 'sitemap.xml');
         const readStart = process.hrtime();
-        const sitemapContent = await fs.readFile(sitemapPath, 'utf8');
+        const sitemapContent = await fs.promises.readFile(sitemapPath, 'utf8');
         const readEnd = process.hrtime(readStart);
         const readDuration = readEnd[0] * 1000 + readEnd[1] / 1e6;
 
@@ -230,10 +300,10 @@ app.post("/subscribe-newsletter", express.json(), (req, res) => {
         ]
     };
     const jsonData = JSON.stringify(data);
-    const url = `https://${env.parsed.MAILCHIMP_SERVER}.api.mailchimp.com/3.0/lists/${env.parsed.MAILCHIMP_LIST_ID}`;
+    const url = `https://${process.env.MAILCHIMP_SERVER}.api.mailchimp.com/3.0/lists/${process.env.MAILCHIMP_LIST_ID}`;
     const options = {
         method: "POST",
-        auth: `${env.parsed.MAILCHIMP_NEWS_LETTER}:${env.parsed.MAILCHIMP_API_KEY}`,
+        auth: `${process.env.MAILCHIMP_NEWS_LETTER}:${process.env.MAILCHIMP_API_KEY}`,
         headers: {
             'Content-Type': 'application/json',
             'Content-Length': jsonData.length
@@ -288,8 +358,8 @@ app.post("/submit-appointment", express.json(), (req, res) => {
     }
 
     const mail = {
-        from: 'info@psychcare360.com',
-        to: 'info@psychcare360.com',
+        from: `${process.env.EMAIL_USER_FROM}`,
+        to: `${process.env.EMAIL_USER}`,
         subject: `New Appointment Request From ${f_name} ${l_name}`,
         text: `
             Primary Condition: ${primary_condition || 'N/A'}
@@ -340,8 +410,8 @@ app.post("/contact-form", express.json(), (req, res) => {
     }
 
     const mail = {
-        from: 'info@psychcare360.com',
-        to: 'info@psychcare360.com',
+        from: `${process.env.EMAIL_USER_FROM}`,
+        to: `${process.env.EMAIL_USER}`,
         subject: `New Contact Form Submission from ${name}`,
         text: `
             Name: ${name}
@@ -388,8 +458,12 @@ app.post("/log-error", (req, res) => {
     res.status(200).send('Error logged');
 });
 
+app.use((req, res) => {
+    res.status(404).send('404 - Not Found');
+});
+
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
     const start = process.hrtime();
     logger.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
     const duration = getDuration(start);
@@ -402,10 +476,10 @@ app.use((err, req, res, next) => {
 });
 
 // Start the server
-const PORT = env.parsed.PORT || 3000;
+const PORT = process.env.PORT || env.parsed.PORT || 3000;
 const server = app.listen(PORT, () => {
     const startupTime = process.uptime() * 1000; // Convert to milliseconds
-    console.log(`Server is running on port ${PORT}`);
+    // console.log(`Server is running on port ${PORT}`);
     debug(`Server started on port ${PORT} in ${startupTime.toFixed(2)}ms`);
 });
 

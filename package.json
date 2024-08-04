@@ -1,7 +1,7 @@
 {
   "name": "360-psychiatry-associates",
   "version": "1.2.1",
-  "description": "This is a project by Muhammad Aljauzy in Co-Operation with 360 Psychiatry Associates LLC.",
+  "description": "360 Psychiatry Associates LLC.",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
@@ -11,13 +11,18 @@
     "debug:contact": "DEBUG=psychcare360:contact nodemon app.js",
     "debug:appointment": "DEBUG=psychcare360:appointment nodemon app.js",
     "debug:all": "DEBUG=psychcare360:*,express:* nodemon app.js",
+    "pm2-start": "pm2 start app.js --name 'psychcare360'",
+    "pm2-stop": "pm2 stop psychcare360",
+    "pm2-restart": "pm2 restart psychcare360",
+    "pm2-logs": "pm2 logs psychcare360",
+    "pm2-list": "pm2 list",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/360-psychiatry-associates.git"
+    "url": "https://github.com/kevinmwangi/psychcare360.git"
   },
   "author": "Kelvin Mwangi",
   "license": "ISC",
@@ -25,19 +30,24 @@
     "@eonasdan/tempus-dominus": "^6.9.9",
     "@popperjs/core": "^2.11.8",
     "body-parser": "^1.20.2",
+    "compression": "^1.7.4",
     "cors": "^2.8.5",
     "debug": "^4.3.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
+    "express-rate-limit": "^7.4.0",
     "express-validator": "^7.0.1",
+    "glob": "^11.0.0",
+    "helmet": "^7.1.0",
     "multer": "^1.4.5-lts.1",
     "multiparty": "^4.2.3",
     "nodemailer": "^6.9.7",
+    "rimraf": "^6.0.1",
     "sitemap": "^7.1.1",
     "winston": "^3.13.1"
   },
   "devDependencies": {
-    "eslint": "^8.42.0",
+    "eslint": "^9.8.0",
     "nodemon": "^3.0.2"
   },
   "engines": {
