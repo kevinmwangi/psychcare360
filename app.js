@@ -155,6 +155,7 @@ app.use(helmet({
                 "https://cdn.jsdelivr.net",
                 "https://assets.calendly.com",
                 "https://embed.tawk.to",
+                "https://*.tawk.to",
                 "https://*.list-manage.com",
                 "https://*.mailchimp.com",
                 "https://va.tawk.to",
@@ -164,15 +165,18 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'",
                 "https://fonts.googleapis.com",
                 "https://cdn.jsdelivr.net",
-                "https://embed.tawk.to"
+                "https://embed.tawk.to",
+                "https://assets.calendly.com",
+                "https://*.tawk.to"
             ],
             fontSrc: ["'self'",
                 "https://fonts.gstatic.com",
                 "https://cdn.jsdelivr.net",
                 "https://embed.tawk.to",
-                "https://va.tawk.to"
+                "https://va.tawk.to",
+                "https://*.tawk.to"
             ],
-            imgSrc: ["'self'", "data:", "https:", "https://*.mailchimp.com"],
+            imgSrc: ["'self'", "data:", "https:", "https://*.mailchimp.com", "https://*.tawk.to"],
             connectSrc: ["'self'",
                 "https://api.tawk.to",
                 "wss://socket.tawk.to",
@@ -184,11 +188,29 @@ app.use(helmet({
                 "https://embed.tawk.to"
             ],
             formAction: ["'self'", "https://*.list-manage.com", "https://*.mailchimp.com"],
-            frameSrc: ["'self'", "https://*.mailchimp.com", "https://calendly.com", "https://tawk.to", "https://www.google.com"],
+            frameSrc: ["'self'",
+                "https://*.mailchimp.com",
+                "https://calendly.com",
+                "https://tawk.to",
+                "https://www.google.com",
+                "https://www.youtube.com",
+                "https://*.tawk.to"
+            ],
             frameAncestors: ["'self'", "https://*.mailchimp.com", "https://*.calendly.com"],
-            mediaSrc: ["'self'", "https://embed.tawk.to"]
+            mediaSrc: ["'self'", "https://embed.tawk.to", "https://*.tawk.to"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: [],
         },
     },
+    referrerPolicy: {
+        policy: 'strict-origin-when-cross-origin'
+    },
+    xssFilter: true,
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    }
 }));
 app.use(limiter);
 app.use(compression());
@@ -456,6 +478,16 @@ app.post("/log-error", (req, res) => {
     const duration = getDuration(start);
     setServerTiming(res, `log-error;dur=${duration}`);
     res.status(200).send('Error logged');
+});
+
+app.post('/csp-report-endpoint', express.json({ type: 'application/csp-report' }), (req, res) => {
+    console.log('CSP violation:', req.body['csp-report']);
+    res.status(204).end();
+});
+
+app.use((req, res, next) => {
+    res.locals.nonce = crypto.randomBytes(16).toString('base64');
+    next();
 });
 
 app.use((req, res) => {
